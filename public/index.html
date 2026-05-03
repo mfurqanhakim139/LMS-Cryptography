@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Learning | Masuk & Daftar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Library Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="bg-slate-900 flex items-center justify-center min-h-screen text-slate-300 font-sans p-4">
+
+    <div class="w-full max-w-md bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+        
+        <!-- Toggle Tabs -->
+        <div class="flex">
+            <button id="tabLogin" onclick="switchTab('login')" class="flex-1 py-4 text-center font-bold text-white bg-indigo-600 transition-colors">Masuk</button>
+            <button id="tabRegister" onclick="switchTab('register')" class="flex-1 py-4 text-center font-bold text-slate-400 bg-slate-900 hover:bg-slate-800 transition-colors">Daftar</button>
+        </div>
+
+        <div class="p-8">
+            <!-- Google Sign-In Area -->
+            <div class="mb-6 text-center">
+                <!-- GANTI data-client_id DI BAWAH INI DENGAN MILIK ANDA -->
+                <div id="g_id_onload"
+                     data-client_id="586513463671-8tat47p4ka17467n8l51fbsqrsg4pa07.apps.googleusercontent.com"
+                     data-context="use"
+                     data-ux_mode="popup"
+                     data-callback="handleGoogleResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin flex justify-center" data-type="standard" data-shape="rectangular" data-theme="filled_black" data-text="signin_with" data-size="large" data-logo_alignment="left"></div>
+                
+                <div class="flex items-center my-4">
+                    <div class="flex-grow border-t border-slate-600"></div>
+                    <span class="flex-shrink-0 mx-4 text-slate-500 text-sm">ATAU DENGAN EMAIL</span>
+                    <div class="flex-grow border-t border-slate-600"></div>
+                </div>
+            </div>
+
+            <!-- Form Login -->
+            <form id="formLogin" class="space-y-4 transition-all duration-300">
+                <input id="logEmail" type="email" placeholder="Email" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-indigo-500">
+                <input id="logPassword" type="password" placeholder="Password" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-indigo-500">
+                <button type="submit" id="btnLogin" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-500/30">Masuk</button>
+            </form>
+
+            <!-- Form Register (Disembunyikan default) -->
+            <form id="formRegister" class="space-y-4 hidden transition-all duration-300">
+                <input id="regName" type="text" placeholder="Nama Lengkap" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-indigo-500">
+                <input id="regEmail" type="email" placeholder="Email" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-indigo-500">
+                <input id="regPassword" type="password" placeholder="Password" required class="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white outline-none focus:border-indigo-500">
+                <button type="submit" id="btnRegister" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-all">Daftar Akun Baru</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Logika Pindah Tab
+        function switchTab(tab) {
+            const isLogin = tab === 'login';
+            document.getElementById('formLogin').classList.toggle('hidden', !isLogin);
+            document.getElementById('formRegister').classList.toggle('hidden', isLogin);
+            
+            document.getElementById('tabLogin').className = isLogin ? 'flex-1 py-4 text-center font-bold text-white bg-indigo-600' : 'flex-1 py-4 text-center font-bold text-slate-400 bg-slate-900 hover:bg-slate-800';
+            document.getElementById('tabRegister').className = !isLogin ? 'flex-1 py-4 text-center font-bold text-white bg-indigo-600' : 'flex-1 py-4 text-center font-bold text-slate-400 bg-slate-900 hover:bg-slate-800';
+        }
+
+        // Logika Submit Login
+        document.getElementById('formLogin').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            document.getElementById('btnLogin').innerText = 'Memproses...';
+            try {
+                const res = await fetch('api.php?ctrl=auth&action=login', {
+                    method: 'POST', body: JSON.stringify({ email: logEmail.value, password: logPassword.value })
+                });
+                const data = await res.json();
+                if(data.status === 'success') window.location.href = data.redirect;
+                else Swal.fire('Gagal', data.message, 'error');
+            } catch (err) { Swal.fire('Error', 'Koneksi bermasalah', 'error'); }
+            document.getElementById('btnLogin').innerText = 'Masuk';
+        });
+
+        // Logika Submit Register
+        document.getElementById('formRegister').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            document.getElementById('btnRegister').innerText = 'Mendaftarkan...';
+            try {
+                const res = await fetch('api.php?ctrl=auth&action=register', {
+                    method: 'POST', body: JSON.stringify({ name: regName.value, email: regEmail.value, password: regPassword.value })
+                });
+                const data = await res.json();
+                if(data.status === 'success') {
+                    Swal.fire('Berhasil!', data.message, 'success');
+                    switchTab('login'); // Otomatis pindah ke tab login
+                    document.getElementById('logEmail').value = regEmail.value; // Isi email otomatis
+                } else Swal.fire('Gagal', data.message, 'error');
+            } catch (err) { Swal.fire('Error', 'Koneksi bermasalah', 'error'); }
+            document.getElementById('btnRegister').innerText = 'Daftar Akun Baru';
+        });
+
+        // Logika Callback dari Google
+        async function handleGoogleResponse(response) {
+    try {
+        const res = await fetch('api.php?ctrl=auth&action=google', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential }) 
+        });
+        
+        // BACA SEBAGAI TEKS TERLEBIH DAHULU (PENTING!)
+        const textResponse = await res.text();
+        
+        try {
+            // Coba jadikan JSON
+            const data = JSON.parse(textResponse);
+            
+            if (data.status === 'success') {
+                window.location.href = data.redirect;
+            } else {
+                Swal.fire('Gagal', data.message, 'error');
+            }
+        } catch (parseErr) {
+            // JIKA PHP MENGELUARKAN TEKS SELAIN JSON (MISAL HTML ERROR)
+            console.error("Respon Server Asli:", textResponse);
+            Swal.fire({
+                icon: 'error',
+                title: 'Server Error',
+                text: textResponse.substring(0, 150) + '...', // Tampilkan error aslinya di layar
+                footer: 'Buka Console Browser (F12) untuk log lengkap'
+            });
+        }
+    } catch(err) {
+        Swal.fire('Koneksi Putus', err.message, 'error');
+    }
+}
+    </script>
+</body>
+</html>

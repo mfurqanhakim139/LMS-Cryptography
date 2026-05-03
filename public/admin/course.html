@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Kelola Kursus | Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="../js/crypto_client.js?v=2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-slate-50 p-8">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-slate-800">Daftar Kursus</h1>
+            <button onclick="showAddModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                + Tambah Kursus
+            </button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-4 text-sm font-bold text-slate-600">Judul Kursus</th>
+                        <th class="px-6 py-4 text-sm font-bold text-slate-600">Deskripsi</th>
+                        <th class="px-6 py-4 text-sm font-bold text-slate-600 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="courseTableBody" class="divide-y divide-slate-100">
+                    <!-- Data ditarik dari API -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', fetchCourses);
+
+        async function fetchCourses() {
+            const response = await fetch('../api.php?ctrl=admin&action=get_courses');
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                const decrypted = await decryptPayload(result.data.payload, result.data.iv, result.data.tag);
+                if (decrypted) {
+                    renderTable(decrypted.data);
+                }
+            }
+        }
+
+        function renderTable(courses) {
+            const tbody = document.getElementById('courseTableBody');
+            tbody.innerHTML = courses.map(course => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-6 py-4 font-semibold text-slate-800">${course.title}</td>
+                    <td class="px-6 py-4 text-slate-600 text-sm">${course.description || '-'}</td>
+                    <td class="px-6 py-4 text-right">
+                        <a href="modules.html?course_id=${course.id}" class="text-indigo-600 hover:underline font-medium">Kelola Modul</a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function showAddModal() {
+            const { value: formValues } = await Swal.fire({
+                title: 'Tambah Kursus Baru',
+                html:
+                    '<input id="swal-title" class="swal2-input" placeholder="Judul Kursus">' +
+                    '<textarea id="swal-desc" class="swal2-textarea" placeholder="Deskripsi"></textarea>',
+                focusConfirm: false,
+                preConfirm: () => {
+                    return {
+                        title: document.getElementById('swal-title').value,
+                        description: document.getElementById('swal-desc').value
+                    }
+                }
+            });
+
+            if (formValues) {
+                const formData = new FormData();
+                formData.append('title', formValues.title);
+                formData.append('description', formValues.description);
+
+                const response = await fetch('../api.php?ctrl=admin&action=add_course', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    Swal.fire('Berhasil!', result.message, 'success');
+                    fetchCourses();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

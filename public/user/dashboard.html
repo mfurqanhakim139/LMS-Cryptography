@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Mahasiswa | EduPortal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+</head>
+<body class="bg-slate-900 text-slate-300 flex flex-col min-h-screen">
+    
+    <!-- NAVBAR GELAP (KONSISTEN) -->
+    <header class="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 z-10 sticky top-0 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-extrabold shadow-inner">E</div>
+            <span class="font-bold text-lg tracking-tight text-white">EduPortal</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+                <p class="text-sm font-bold text-slate-200">Mahasiswa Aktif</p>
+                <p class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Sistem Informasi</p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center text-indigo-400">
+                <i class="ph-fill ph-student text-xl"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- KONTEN UTAMA -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <div class="mb-8 border-b border-slate-800 pb-6">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Ruang Belajar</h1>
+            <p class="text-slate-400 mt-2 text-sm">Pilih kursus yang tersedia dan lanjutkan progres Anda.</p>
+        </div>
+
+        <!-- AREA KARTU KURSUS -->
+        <div id="course-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading State -->
+            <div class="bg-slate-800 rounded-2xl p-6 border border-slate-700 animate-pulse">
+                <div class="h-40 bg-slate-700 rounded-xl mb-4"></div>
+                <div class="h-6 bg-slate-600 rounded w-3/4 mb-3"></div>
+                <div class="h-4 bg-slate-700 rounded w-full mb-1"></div>
+                <div class="h-10 bg-slate-600 rounded-xl w-full mt-6"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Kriptografi AES-256-GCM -->
+    <script src="../js/crypto_client.js?v=4"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', fetchDashboardCourses);
+
+        async function fetchDashboardCourses() {
+            try {
+                const response = await fetch('https://kursus.mitrautamateknologi.xyz/public/api.php?ctrl=course&action=get_all_courses&nocache=' + new Date().getTime());
+                const result = await response.json();
+                const container = document.getElementById('course-container');
+
+                if (result.status === 'success') {
+                    const decrypted = await decryptPayload(result.data.payload, result.data.iv, result.data.tag);
+                    
+                    if (decrypted && decrypted.data.length > 0) {
+                        const courses = decrypted.data;
+                        container.innerHTML = courses.map(course => `
+                            <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-lg hover:border-indigo-500 transition-all duration-300 overflow-hidden group flex flex-col cursor-pointer" onclick="window.location.href='player.html?course_id=${course.id}'">
+                                <div class="h-40 bg-slate-900 flex items-center justify-center border-b border-slate-700">
+                                    <i class="ph-duotone ph-monitor-play text-5xl text-indigo-500 group-hover:scale-110 transition-transform"></i>
+                                </div>
+                                <div class="p-6 flex-1 flex flex-col">
+                                    <h3 class="font-bold text-lg text-white mb-2 line-clamp-2">${course.title}</h3>
+                                    <p class="text-sm text-slate-400 mb-6 line-clamp-2 flex-1">${course.description || 'Tidak ada deskripsi.'}</p>
+                                    <button class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                                        Buka Modul <i class="ph-bold ph-play-circle"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = `<div class="col-span-full text-center py-16 bg-slate-800 rounded-2xl border border-slate-700"><i class="ph-duotone ph-empty text-6xl text-slate-500 mb-4 block"></i><p class="text-slate-400">Belum ada kursus.</p></div>`;
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('course-container').innerHTML = `<p class="text-red-400 col-span-full bg-red-900/20 p-4 rounded-xl">Koneksi API terputus.</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
